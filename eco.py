@@ -1,501 +1,118 @@
 import streamlit as st
-import random
+from openai import OpenAI
 
+# 1. Підключення ШІ (Твій ключ)
+try:
+    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+except Exception:
+    st.error("Будь ласка, додайте OPENAI_API_KEY у Secrets!")
 # Налаштування сторінки
-st.set_page_config(
-    page_title="Еко-Портал",
-    layout="wide"
-)
+st.set_page_config(page_title="Еко-Портал", layout="wide")
 
-# =========================
-# НАЛАШТУВАННЯ
-# =========================
-
+# Налаштування шрифтів через Sidebar
 st.sidebar.title("⚙️ Налаштування")
-
-font_choice = st.sidebar.selectbox(
-    "Оберіть шрифт інтерфейсу:",
-    ["Default", "Serif", "Monospace", "Tahoma"]
-)
-
-fonts = {
-    "Default": "sans-serif",
-    "Serif": "serif",
-    "Monospace": "monospace",
-    "Tahoma": "Tahoma"
-}
-
+font_choice = st.sidebar.selectbox("Оберіть шрифт інтерфейсу:", ["Default", "Serif", "Monospace", "Tahoma"])
+fonts = {"Default": "sans-serif", "Serif": "serif", "Monospace": "monospace", "Tahoma": "Tahoma"}
 f = fonts[font_choice]
 
-# =========================
-# CSS
-# =========================
-
+# CSS для Telegram-стилю
 st.markdown(f"""
-<style>
+    <style>
+    * {{ font-family: {f} !important; }}
+    .stApp {{ background-color: #f0fdf4; }}
+    [data-testid="stSidebar"] {{ background-color: #dcfce7; min-width: 320px; }}
+    .chat-bubble {{
+        padding: 30px;
+        border-radius: 20px;
+        margin-bottom: 25px;
+        background: white;
+        border: 1px solid #e5e7eb;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+        display: flex;
+        gap: 20px;
+    }}
+    .avatar {{ width: 60px; height: 60px; border-radius: 50%; flex-shrink: 0; }}
+    .main-article {{ 
+        font-size: 18px !important; 
+        line-height: 1.8 !important; 
+        color: #1f2937; 
+        text-align: justify;
+        white-space: pre-wrap;
+    }}
+    h1, h2, h3 {{ color: #064e3b !important; font-weight: bold !important; }}
+    </style>
+    """, unsafe_allow_html=True)
 
-* {{
-    font-family: {f} !important;
-}}
-
-.stApp {{
-    background-color: #f0fdf4;
-}}
-
-[data-testid="stSidebar"] {{
-    background-color: #dcfce7;
-    min-width: 320px;
-}}
-
-.chat-bubble {{
-    padding: 30px;
-    border-radius: 20px;
-    margin-bottom: 25px;
-    background: white;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.05);
-    display: flex;
-    gap: 20px;
-}}
-
-.avatar {{
-    width: 60px;
-    height: 60px;
-    border-radius: 50%;
-    flex-shrink: 0;
-}}
-
-.main-article {{
-    font-size: 18px !important;
-    line-height: 1.8 !important;
-    color: #1f2937;
-    text-align: justify;
-    white-space: pre-wrap;
-}}
-
-h1, h2, h3 {{
-    color: #064e3b !important;
-    font-weight: bold !important;
-}}
-
-</style>
-""", unsafe_allow_html=True)
-
-# =========================
-# БАЗА ДАНИХ
-# =========================
-
+# БАЗА ДАНИХ (Статті залишаються для бази знань бота)
 eco_database = {
-
     "🏠 Головна": {
-        "text": """
-# Ласкаво просимо до Еко-Порталу 🌱
-
-Цей портал допоможе вам дізнатися більше про:
-- сортування сміття
-- захист природи
-- економію води
-- екологічний транспорт
-- еко-енергію
-
-Оберіть тему зліва або поставте своє питання.
-""",
-
+        "text": """# Ласкаво просимо до Еко-Порталу! 🌱\nТут ви знайдете все про екологію та сталий розвиток.""",
         "img": "https://images.unsplash.com/photo-1518173946687-a4c8a9ba332f?q=80&w=1200"
     },
-
     "♻️ Як сортувати сміття?": {
-        "text": """
-# Сортування сміття ♻️
-
-Сортування допомагає зменшити кількість відходів.
-
-### Основні правила:
-* пластик мити
-* папір тримати сухим
-* батарейки не викидати у звичайний бак
-* скло сортувати окремо
-""",
-
+        "text": """# Глобальна стратегія сортування ♻️\nПластик (1-5), макулатура та скло — ваші кроки до чистої планети.""",
         "img": "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=1200"
     },
-
     "🌲 Захист лісів": {
-        "text": """
-# Захист лісів 🌲
-
-Ліси очищують повітря та підтримують клімат.
-
-### Як допомогти:
-* економити папір
-* висаджувати дерева
-* не смітити у лісі
-""",
-
+        "text": """# Ліси як фундамент стабільності 🌲\nДерева — легені планети, що поглинають CO2.""",
         "img": "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=1200"
     },
-
     "🦋 Біорізноманіття": {
-        "text": """
-# Біорізноманіття 🦋
-
-Кожна тварина та рослина важлива для природи.
-
-### Проблеми:
-* забруднення
-* вирубка лісів
-* пластик в океанах
-""",
-
+        "text": """# Шосте масове вимирання 🦋\nКожен вид важливий для балансу екосистеми.""",
         "img": "https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=1200"
     }
 }
 
-# =========================
-# УСІ ТЕМИ
-# =========================
+all_topics = ["🏠 Головна", "♻️ Як сортувати сміття?", "🌲 Захист лісів", "🦋 Біорізноманіття", "💬 Інше питання"]
 
-all_topics = [
-    "🏠 Головна",
-    "♻️ Як сортувати сміття?",
-    "🌲 Захист лісів",
-    "🦋 Біорізноманіття",
-    "💧 Вода - життя",
-    "☀️ Еко-енергія",
-    "🍎 Еко-харчування",
-    "👗 Стала мода",
-    "🚲 Транспорт",
-    "🐾 Дика природа",
-    "🔎 Дослідження",
-    "💬 Інше питання"
-]
-
-# Додаємо пусті теми
-for t in all_topics:
-
-    if t not in eco_database:
-
-        eco_database[t] = {
-            "text": f"""
-# {t}
-
-Цей розділ присвячений питанням екології та захисту природи.
-""",
-
-            "img": "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200"
-        }
-
-# =========================
-# ВІДПОВІДІ ДЛЯ ТЕМ
-# =========================
-
-topic_answers = {
-
-    "💧 Вода - життя": [
-
-        """
-# Як економити воду 💧
-
-### Корисні звички:
-* вимикати кран під час чищення зубів
-* приймати душ замість ванни
-* ремонтувати протікання
-
-Так можна зберегти сотні літрів води.
-""",
-
-        """
-# Чому вода важлива 🌍
-
-Прісної води на Землі дуже мало.
-
-### Як допомогти природі:
-* не забруднювати річки
-* використовувати воду економно
-* не залишати кран відкритим
-"""
-    ],
-
-    "☀️ Еко-енергія": [
-
-        """
-# Відновлювана енергія ☀️
-
-Сонячна енергія допомагає зменшити забруднення.
-
-### Переваги:
-* менше шкідливих викидів
-* економія ресурсів
-* безпечніше для природи
-""",
-
-        """
-# Еко-енергія 🌱
-
-Вітрова та сонячна енергія — майбутнє планети.
-
-Вони допомагають боротися зі зміною клімату.
-"""
-    ],
-
-    "🚲 Транспорт": [
-
-        """
-# Екологічний транспорт 🚲
-
-### Найкращі варіанти:
-* велосипед
-* громадський транспорт
-* електромобілі
-* піші прогулянки
-""",
-
-        """
-# Вплив транспорту 🚗
-
-Автомобілі забруднюють повітря.
-
-### Що допоможе:
-* менше користуватись авто
-* ходити пішки
-* їздити велосипедом
-"""
-    ],
-
-    "🍎 Еко-харчування": [
-
-        """
-# Еко-харчування 🍎
-
-Корисно обирати локальні продукти.
-
-### Це допомагає:
-* зменшити забруднення
-* підтримати фермерів
-* зберегти природу
-""",
-
-        """
-# Екологічне харчування 🌿
-
-### Корисні звички:
-* менше харчових відходів
-* багаторазові сумки
-* локальні продукти
-"""
-    ],
-
-    "👗 Стала мода": [
-
-        """
-# Стала мода 👗
-
-Швидка мода сильно шкодить природі.
-
-### Краще:
-* купувати якісний одяг
-* переробляти речі
-* купувати менше
-""",
-
-        """
-# Еко-мода 🌱
-
-Одяг виробляє багато забруднення.
-
-### Як допомогти:
-* секонд-хенд
-* повторне використання
-* екологічні тканини
-"""
-    ]
-}
-
-# =========================
-# SIDEBAR
-# =========================
-
+# Sidebar Навігація
 st.sidebar.title("🌸 Еко-Меню")
-
-topic = st.sidebar.radio(
-    "Оберіть тему для обговорення:",
-    all_topics
-)
-
-# =========================
-# ГОЛОВНИЙ ЗАГОЛОВОК
-# =========================
-
-st.title("🌱 Еко-Портал")
-
-# =========================
-# SESSION STATE
-# =========================
+topic = st.sidebar.radio("Оберіть тему:", all_topics)
 
 if "messages" not in st.session_state:
     st.session_state.messages = []
 
-# =========================
-# ЗМІНА ТЕМИ
-# =========================
-
-if (
-    "current_topic" not in st.session_state
-    or st.session_state.current_topic != topic
-):
-
+# Очищення та зміна теми
+if "current_topic" not in st.session_state or st.session_state.current_topic != topic:
     st.session_state.current_topic = topic
-
-    # Випадкові відповіді для тем
-    if topic in topic_answers:
-        topic_text = random.choice(topic_answers[topic])
+    if topic != "💬 Інше питання":
+        res = eco_database[topic]
+        st.session_state.messages = [{"role": "assistant", "content": res["text"], "image": res["img"]}]
     else:
-        topic_text = eco_database[topic]["text"]
+        st.session_state.messages = [{"role": "assistant", "content": "# 💬 Питання та відповіді\nЗапитайте мене про будь-що, що стосується екології!"}]
 
-    st.session_state.messages.append({
-        "role": "assistant",
-        "content": topic_text,
-        "image": eco_database[topic]["img"]
-    })
-
-# =========================
-# ІКОНКИ
-# =========================
-
+# Відображення чату
 u_icon = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
 b_icon = "https://cdn-icons-png.flaticon.com/512/11013/11013833.png"
 
-# =========================
-# ВІДОБРАЖЕННЯ ЧАТУ
-# =========================
-
 for msg in st.session_state.messages:
-
     icon = u_icon if msg["role"] == "user" else b_icon
-
     st.markdown(f"""
-    <div class="chat-bubble">
-        <img src="{icon}" class="avatar">
-        <div class="main-article">{msg["content"]}</div>
-    </div>
+        <div class="chat-bubble">
+            <img src="{icon}" class="avatar">
+            <div class="main-article">{msg["content"]}</div>
+        </div>
     """, unsafe_allow_html=True)
-
     if "image" in msg:
         st.image(msg["image"], use_container_width=True)
 
-# =========================
-# ЧАТ
-# =========================
-
+# ЛОГІКА РЕАЛЬНОГО ШІ
 if prompt := st.chat_input("Напишіть своє питання про екологію..."):
+    st.session_state.messages.append({"role": "user", "content": prompt})
+    
+    with st.spinner("ШІ генерує розгорнуту відповідь..."):
+        try:
+            # Запит до OpenAI
+            response = client.chat.completions.create(
+                model="gpt-4o",
+                messages=[
+                    {"role": "system", "content": "Ти — професійний еколог-експерт. Твої відповіді мають бути дуже розгорнутими (не менше 500 слів), структурованими за допомогою Markdown, з використанням заголовків, списків та наукових фактів. Пиши українською мовою."},
+                    {"role": "user", "content": prompt}
+                ]
+            )
+            ai_response = response.choices[0].message.content
+        except Exception as e:
+            ai_response = f"Помилка підключення: {str(e)}"
 
-    # повідомлення користувача
-    st.session_state.messages.append({
-        "role": "user",
-        "content": prompt
-    })
-
-    user_q = prompt.lower()
-
-    # =========================
-    # РОЗУМНІ ВІДПОВІДІ
-    # =========================
-
-    if "вода" in user_q:
-
-        detailed_ans = random.choice([
-            """
-# Як берегти воду 💧
-
-### Прості способи:
-* вимикати воду під час чищення зубів
-* не залишати кран відкритим
-* використовувати душ замість ванни
-""",
-
-            """
-# Економія води 🚰
-
-### Що допомагає:
-* короткий душ
-* ремонт протікань
-* економне використання води
-"""
-        ])
-
-    elif "ліс" in user_q or "дерев" in user_q:
-
-        detailed_ans = random.choice([
-            """
-# Захист лісів 🌲
-
-Ліси очищують повітря та виробляють кисень.
-
-### Як допомогти:
-* висаджувати дерева
-* економити папір
-* не смітити
-""",
-
-            """
-# Чому ліси важливі 🌳
-
-Ліси підтримують клімат та є домом для тварин.
-"""
-        ])
-
-    elif "пластик" in user_q:
-
-        detailed_ans = random.choice([
-            """
-# Пластик ♻️
-
-Пластик забруднює океани та шкодить тваринам.
-
-### Що робити:
-* сортувати сміття
-* використовувати екоторби
-* уникати одноразового пластику
-""",
-
-            """
-# Проблема пластику 🌍
-
-Пластик розкладається сотні років.
-
-### Допомога природі:
-* багаторазові пляшки
-* сортування
-* менше упаковки
-"""
-        ])
-
-    else:
-
-        detailed_ans = random.choice([
-            f"""
-# Відповідь 🌱
-
-Ваше питання:
-"{prompt}"
-
-Це важлива тема для екології та захисту природи.
-""",
-
-            f"""
-# Еко-порада 🌍
-
-Питання:
-"{prompt}"
-
-Навіть маленькі екологічні звички допомагають планеті.
-"""
-        ])
-
-    # відповідь бота
-    st.session_state.messages.append({
-        "role": "assistant",
-        "content": detailed_ans
-    })
-
+    st.session_state.messages.append({"role": "assistant", "content": ai_response})
     st.rerun()
