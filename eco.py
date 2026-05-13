@@ -1,21 +1,23 @@
 import streamlit as st
-from openai import OpenAI
+import google.generativeai as genai
 
-# 1. Підключення ШІ (Твій ключ)
+# 1. Налаштування Gemini (Беремо ключ із Secrets)
 try:
-    client = OpenAI(api_key=st.secrets["OPENAI_API_KEY"])
+    genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
+    model = genai.GenerativeModel('gemini-1.5-pro') # Pro версія для найкращих текстів
 except Exception:
-    st.error("Будь ласка, додайте OPENAI_API_KEY у Secrets!")
+    st.error("Будь ласка, додайте GEMINI_API_KEY у Secrets вашого додатка!")
+
 # Налаштування сторінки
 st.set_page_config(page_title="Еко-Портал", layout="wide")
 
-# Налаштування шрифтів через Sidebar
+# Налаштування шрифтів
 st.sidebar.title("⚙️ Налаштування")
 font_choice = st.sidebar.selectbox("Оберіть шрифт інтерфейсу:", ["Default", "Serif", "Monospace", "Tahoma"])
 fonts = {"Default": "sans-serif", "Serif": "serif", "Monospace": "monospace", "Tahoma": "Tahoma"}
 f = fonts[font_choice]
 
-# CSS для Telegram-стилю
+# CSS стиль (Telegram-стиль)
 st.markdown(f"""
     <style>
     * {{ font-family: {f} !important; }}
@@ -43,76 +45,61 @@ st.markdown(f"""
     </style>
     """, unsafe_allow_html=True)
 
-# БАЗА ДАНИХ (Статті залишаються для бази знань бота)
-eco_database = {
-    "🏠 Головна": {
-        "text": """# Ласкаво просимо до Еко-Порталу! 🌱\nТут ви знайдете все про екологію та сталий розвиток.""",
-        "img": "https://images.unsplash.com/photo-1518173946687-a4c8a9ba332f?q=80&w=1200"
-    },
-    "♻️ Як сортувати сміття?": {
-        "text": """# Глобальна стратегія сортування ♻️\nПластик (1-5), макулатура та скло — ваші кроки до чистої планети.""",
-        "img": "https://images.unsplash.com/photo-1532996122724-e3c354a0b15b?q=80&w=1200"
-    },
-    "🌲 Захист лісів": {
-        "text": """# Ліси як фундамент стабільності 🌲\nДерева — легені планети, що поглинають CO2.""",
-        "img": "https://images.unsplash.com/photo-1441974231531-c6227db76b6e?q=80&w=1200"
-    },
-    "🦋 Біорізноманіття": {
-        "text": """# Шосте масове вимирання 🦋\nКожен вид важливий для балансу екосистеми.""",
-        "img": "https://images.unsplash.com/photo-1500382017468-9049fed747ef?q=80&w=1200"
-    }
-}
+# Функція для генерації контенту через Gemini
+def generate_eco_content(topic_name):
+    prompt = f"""
+    Ти — провідний експерт-еколог. Напиши надзвичайно детальну науково-популярну статтю на тему: {topic_name}.
+    ВИМОГИ:
+    1. Текст має бути дуже великим (близько 1500-2000 слів).
+    2. Використовуй заголовки (##), списки та наукові факти.
+    3. Пиши українською мовою.
+    4. Зроби статтю цікавою, з прикладами та прогнозами на майбутнє.
+    """
+    try:
+        response = model.generate_content(prompt)
+        return response.text
+    except Exception as e:
+        return f"Помилка генерації: {str(e)}"
 
+# Навігація
 all_topics = ["🏠 Головна", "♻️ Як сортувати сміття?", "🌲 Захист лісів", "🦋 Біорізноманіття", "💬 Інше питання"]
-
-# Sidebar Навігація
 st.sidebar.title("🌸 Еко-Меню")
 topic = st.sidebar.radio("Оберіть тему:", all_topics)
 
+# Збереження повідомлень (кеш)
 if "messages" not in st.session_state:
-    st.session_state.messages = []
+    st.session_state.messages = {}
 
-# Очищення та зміна теми
-if "current_topic" not in st.session_state or st.session_state.current_topic != topic:
-    st.session_state.current_topic = topic
-    if topic != "💬 Інше питання":
-        res = eco_database[topic]
-        st.session_state.messages = [{"role": "assistant", "content": res["text"], "image": res["img"]}]
-    else:
-        st.session_state.messages = [{"role": "assistant", "content": "# 💬 Питання та відповіді\nЗапитайте мене про будь-що, що стосується екології!"}]
+# Логіка відображення
+st.title(f"🌱 Еко-Портал: {topic}")
 
-# Відображення чату
+if topic not in st.session_state.messages:
+    with st.spinner("ШІ готує розгорнутий матеріал... зачекайте хвилинку"):
+        st.session_state.messages[topic] = generate_eco_content(topic)
+
+# Вивід результату
 u_icon = "https://cdn-icons-png.flaticon.com/512/3135/3135715.png"
 b_icon = "https://cdn-icons-png.flaticon.com/512/11013/11013833.png"
 
-for msg in st.session_state.messages:
-    icon = u_icon if msg["role"] == "user" else b_icon
-    st.markdown(f"""
-        <div class="chat-bubble">
-            <img src="{icon}" class="avatar">
-            <div class="main-article">{msg["content"]}</div>
-        </div>
-    """, unsafe_allow_html=True)
-    if "image" in msg:
-        st.image(msg["image"], use_container_width=True)
+st.markdown(f"""
+    <div class="chat-bubble">
+        <img src="{b_icon}" class="avatar">
+        <div class="main-article">{st.session_state.messages[topic]}</div>
+    </div>
+""", unsafe_allow_html=True)
 
-# ЛОГІКА РЕАЛЬНОГО ШІ
-if prompt := st.chat_input("Напишіть своє питання про екологію..."):
-    st.session_state.messages.append({"role": "user", "content": prompt})
-    
-    with st.spinner("ШІ генерує розгорнуту відповідь..."):
-        try:
-            # Запит до OpenAI
-            response = client.chat.completions.create(
-                model="gpt-4o",
-                messages=[
-                    {"role": "system", "content": "Ти — професійний еколог-експерт. Твої відповіді мають бути дуже розгорнутими (не менше 500 слів), структурованими за допомогою Markdown, з використанням заголовків, списків та наукових фактів. Пиши українською мовою."},
-                    {"role": "user", "content": prompt}
-                ]
-            )
-            ai_response = response.choices[0].message.content
-        except Exception as e:
-            ai_response = f"Помилка підключення: {str(e)}"
-
-    st.session_state.messages.append({"role": "assistant", "content": ai_response})
-    st.rerun()
+# Чат для довільних питань
+if topic == "💬 Інше питання":
+    if prompt := st.chat_input("Запитайте про екологію..."):
+        with st.spinner("Геміні думає..."):
+            answer = generate_eco_content(prompt)
+            st.markdown(f"""
+                <div class="chat-bubble">
+                    <img src="{u_icon}" class="avatar">
+                    <div class="main-article"><b>Ваше питання:</b> {prompt}</div>
+                </div>
+                <div class="chat-bubble">
+                    <img src="{b_icon}" class="avatar">
+                    <div class="main-article">{answer}</div>
+                </div>
+            """, unsafe_allow_html=True)
