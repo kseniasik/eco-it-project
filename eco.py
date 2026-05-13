@@ -4,9 +4,9 @@ import google.generativeai as genai
 # 1. Налаштування Gemini (Беремо ключ із Secrets)
 try:
     genai.configure(api_key=st.secrets["GEMINI_API_KEY"])
-  model = genai.GenerativeModel('gemini-1.5-flash-latest')
+    model = genai.GenerativeModel('gemini-1.5-flash-latest')
 except Exception:
-    st.error("Будь ласка, додайте GEMINI_API_KEY у Secrets вашого додатка!")
+    st.error("Будь ласка, додайте GEMINI_API_KEY у Secrets!")
 
 # Налаштування сторінки
 st.set_page_config(page_title="Еко-Портал", layout="wide")
